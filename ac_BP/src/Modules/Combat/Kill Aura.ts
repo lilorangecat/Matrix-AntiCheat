@@ -127,7 +127,7 @@ interface LastRotateData {
     verticalR: number;
     lastVel: Vector3;
     lastPitch: number;
-    kAFlags: number | string;
+    kAFlags: number;
     invalidPitch: number;
 }
 const lastRotateData = new Map<string, LastRotateData>();
@@ -162,7 +162,7 @@ function initializeRotationData(player: Player, horizontalRotation: number, vert
     });
 }
 
-function updateRotationData(player: Player,  LastRotateData, horizontalRotation: number, verticalRotation: number) {
+function updateRotationData(player: Player,  data:LastRotateData, horizontalRotation: number, verticalRotation: number) {
     const playerVelocity = player.getVelocity();
     const yPitch = Math.abs(data.verticalR - verticalRotation);
 
@@ -172,7 +172,7 @@ function updateRotationData(player: Player,  LastRotateData, horizontalRotation:
     data.lastPitch = yPitch;
 }
 
-function checkInstantRotation(config: configi, player: Player,  LastRotateData, horizontalRotation: number): boolean {
+function checkInstantRotation(config: configi, player: Player,  data:LastRotateData, horizontalRotation: number): boolean {
     const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
     const horizontalAngle = calculateHorizontalAngle(player, nearestPlayer, horizontalRotation);
     const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
@@ -183,7 +183,7 @@ function checkInstantRotation(config: configi, player: Player,  LastRotateData, 
         return false;
     }
 
-    if (data.kAFlags === "G" && rotatedMove === 0 && data.verticalR !== 0) {
+    if (rotatedMove === 0 && data.verticalR !== 0) {
         flag(player, "Kill Aura", "G", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["RotatedMove:" + toFixed(rotatedMove, 5, true)]);
         data.kAFlags = 0;
         return false;
@@ -191,7 +191,7 @@ function checkInstantRotation(config: configi, player: Player,  LastRotateData, 
 
     if ((rotatedMove > 0 && rotatedMove < 60 && move > 0) || rotatedMove > 60) {
         data.kAFlags++;
-        if (rotatedMove > 60) data.kAFlags = "G";
+        if (rotatedMove > 60) data.kAFlags++;
     } else if ((rotatedMove === 0 && move > 0) || (rotatedMove > 0 && move === 0) || rotatedMove > 40) {
         data.kAFlags = 0;
     }
@@ -205,7 +205,7 @@ function checkInstantRotation(config: configi, player: Player,  LastRotateData, 
     return true;
 }
 
-function checkSmoothRotation(config: configi, player: Player,  LastRotateData, verticalRotation: number): boolean {
+function checkSmoothRotation(config: configi, player: Player,  data:LastRotateData, verticalRotation: number): boolean {
     const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
     const move = calculateHorizontalMovement(nearestPlayer);
     const yPitch = Math.abs(data.verticalR - verticalRotation);
@@ -227,7 +227,7 @@ function checkSmoothRotation(config: configi, player: Player,  LastRotateData, v
     return true;
 }
 
-function checkSuspiciousRotation(config: configi, player: Player,  LastRotateData, horizontalRotation: number, verticalRotation: number): boolean {
+function checkSuspiciousRotation(config: configi, player: Player,  data:LastRotateData, horizontalRotation: number, verticalRotation: number): boolean {
     const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
 
     if (

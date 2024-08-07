@@ -9,33 +9,40 @@ interface BanInfo {
     time: number | "forever";
 }
 
+function getUnbanList(): string[] {
+    const unbanListingString = world.getDynamicProperty("unbanListing") as string;
+    return unbanListingString ? JSON.parse(unbanListingString) : [];
+}
+
+function setUnbanList(unbanList: string[]): void {
+    world.setDynamicProperty("unbanListing", JSON.stringify(unbanList));
+}
+
 function checksBan(player: Player): void {
     const info = player.getDynamicProperty("isBanned");
+    const baninfo: BanInfo | undefined = info ? JSON.parse(info) : undefined;
 
-    const baninfo: BanInfo | any = info === undefined ? undefined : JSON.parse(info as string);
-
-    const unbanListingString = world.getDynamicProperty("unbanListing") as string;
-    const unbanListing: string[] = unbanListingString ? JSON.parse(unbanListingString) : [];
+    const unbanListing = getUnbanList();
 
     if (unbanListing.includes(player.name)) {
-        world.setDynamicProperty("unbanListing", JSON.stringify(unbanListing.filter((name) => name !== player.name)));
+        setUnbanList(unbanListing.filter((name) => name !== player.name));
         player.setDynamicProperty("isBanned", undefined);
         return;
     }
 
-    if (baninfo === undefined) {
+    if (!baninfo) {
         const banqueue: BanqueueData[] = JSON.parse((world.getDynamicProperty("banqueue") as string) ?? "[]");
-        const queuedata = banqueue.find(({ name }) => name == player.name);
+        const queuedata = banqueue.find(({ name }) => name === player.name);
         if (queuedata) {
             Action.ban(player, queuedata.reason, queuedata.admin, queuedata.time);
-            world.setDynamicProperty("banqueue", JSON.stringify(banqueue.filter(({ name }) => name != player.name)));
+            world.setDynamicProperty("banqueue", JSON.stringify(banqueue.filter(({ name }) => name !== player.name)));
         }
         return;
     }
 
-    let reason;
-    let by;
-    let time;
+    let reason: string;
+    let by: string;
+    let time: number | "forever";
 
     try {
         reason = baninfo.reason;
@@ -44,33 +51,29 @@ function checksBan(player: Player): void {
     } catch {
         console.log("baninfo is not a BanInfo object, unbanned");
         player.setDynamicProperty("isBanned", undefined);
+        return;
     }
 
-    if (time !== "forever") {
-        if (Date.now() > time) {
-            player.setDynamicProperty("isBanned", undefined);
-            return;
-        }
+    if (time !== "forever" && Date.now() > time) {
+        player.setDynamicProperty("isBanned", undefined);
+        return;
     }
 
     const timeLeft = time === "forever" ? "forever" : msToTime(time - Date.now());
-    let timeTherShold: any;
-    if (timeLeft === "forever") {
-        timeTherShold = "forever";
-    } else {
-        const { days: d, hours: h, minutes: m, seconds: s } = timeLeft;
-        timeTherShold = `${d} days, ${h} hours, ${m} minutes, ${s} seconds`;
-    }
+    const timeTherShold = timeLeft === "forever"
+        ? "forever"
+        : `${timeLeft.days} days, ${timeLeft.hours} hours, ${timeLeft.minutes} minutes, ${timeLeft.seconds} seconds`;
+
     const extraMessages = c().banModify.extraMessages as string[];
-    const extraString =
-        extraMessages.length > 0
-            ? extraMessages
-                  .map((string) => {
-                      const [key, value] = string.split(":");
-                      return `§7${key}: §c${value}`;
-                  })
-                  .join("\n")
-            : "";
+    const extraString = extraMessages.length > 0
+        ? extraMessages
+            .map((string) => {
+                const [key, value] = string.split(":");
+                return `§7${key}: §c${value}`;
+            })
+            .join("\n")
+        : "";
+
     try {
         player.runCommand(`kick "${player.name}" §r\n§c§lYour have been banned!\n§r§7Time Left:§c ${timeTherShold}\n§7Reason: §c${reason}§r\n§7By: §c${by}${extraString}`);
     } catch {
@@ -78,46 +81,44 @@ function checksBan(player: Player): void {
     }
 }
 
-function ban(player: Player, reason: string, by: string, time: number | "forever") {
-    if (isHost(player) || isAdmin(player)) return;
-    // Prevent if the player is lately banned (negative time)
-    if (time != "forever" && time < Date.now()) return;
+function ban(player: Player, reason: string, by: string, time: number | "forever"): void {
+    if (isHost(player) || isAdmin(player)) {
+        return;
+    }
+    if (time !== "forever" && time < Date.now()) {
+        return;
+    }
     system.run(() => {
         player.setDynamicProperty(
             "isBanned",
-            JSON.stringify({
-                reason: reason,
-                by: by,
-                time: time,
-            } as BanInfo)
+            JSON.stringify({ reason, by, time } as BanInfo)
         );
         checksBan(player);
     });
 }
 
-function unban(playerName: string) {
-    const unbanListingString = world.getDynamicProperty("unbanListing") as string;
-    const unbanListing: string[] = unbanListingString ? JSON.parse(unbanListingString) : [];
-
-    system.run(() => world.setDynamicProperty("unbanListing", JSON.stringify([...unbanListing, playerName])));
+function unban(playerName: string): void {
+    const unbanList = getUnbanList();
+    setUnbanList([...unbanList, playerName]);
 }
 
-function unbanRemove(playerName: string) {
-    const unbanListingString = world.getDynamicProperty("unbanListing") as string;
-    const unbanListing: string[] = unbanListingString ? JSON.parse(unbanListingString) : [];
-    if (!unbanListing.includes(playerName)) return false;
-    system.run(() => world.setDynamicProperty("unbanListing", JSON.stringify(unbanListing.filter((name) => name !== playerName))));
+function unbanRemove(playerName: string): boolean {
+    const unbanList = getUnbanList();
+    if (!unbanList.includes(playerName)) {
+        return false;
+    }
+    setUnbanList(unbanList.filter((name) => name !== playerName));
     return true;
 }
 
-function unbanList() {
-    const unbanListingString = world.getDynamicProperty("unbanListing") as string;
-    return unbanListingString ? JSON.parse(unbanListingString) : [];
+function unbanList(): string[] {
+    return getUnbanList();
 }
 
 world.afterEvents.playerSpawn.subscribe(({ player, initialSpawn }) => {
-    if (!initialSpawn) return;
-    checksBan(player);
+    if (initialSpawn) {
+        checksBan(player);
+    }
 });
 
 export { ban, unban, unbanRemove, unbanList };

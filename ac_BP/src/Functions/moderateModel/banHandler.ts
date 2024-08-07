@@ -20,7 +20,7 @@ function setUnbanList(unbanList: string[]): void {
 
 function checksBan(player: Player): void {
     const info = player.getDynamicProperty("isBanned");
-    const baninfo: BanInfo | undefined = info ? JSON.parse(info) : undefined;
+    const baninfo: BanInfo | any = info === undefined ? undefined : JSON.parse(info as string);
 
     const unbanListing = getUnbanList();
 

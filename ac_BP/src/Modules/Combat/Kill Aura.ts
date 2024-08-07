@@ -130,8 +130,9 @@ function doubleEvent(config: configi, player: Player, hitEntity: Entity, onFirst
 const lastRotateData = new Map();
 function intickEvent(config: configi, player: Player) {
     const data = lastRotateData.get(player.id);
-    const verticalRotation = player.getRotation().x;
-    const horizontalRotation = player.getRotation().y;
+    const PlayerRota = player.getRotation();
+    const verticalRotation = PlayerRota.x;
+    const horizontalRotation = PlayerRota.y;
 
     if (!data) {
         initializeRotationData(player, horizontalRotation, verticalRotation);

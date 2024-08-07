@@ -130,72 +130,126 @@ function doubleEvent(config: configi, player: Player, hitEntity: Entity, onFirst
 const lastRotateData = new Map();
 function intickEvent(config: configi, player: Player) {
     const data = lastRotateData.get(player.id);
-    const pos1 = player.getHeadLocation();
+    const verticalRotation = player.getRotation().x;
+    const horizontalRotation = player.getRotation().y;
+
+    if (!data) {
+        initializeRotationData(player, horizontalRotation, verticalRotation);
+        return;
+    }
+
     const raycast = player.getEntitiesFromViewDirection()[0];
-    const { x: verticalRotation, y: horizontalRotation } = player.getRotation();
+    if (!raycast || !(raycast.entity instanceof Player) || raycast.distance > 7.5 || player.hasTag(DisableTags.pvp)) return;
+
+    updateRotationData(player, data, horizontalRotation, verticalRotation);
+    if (!checkInstantRotation(config, player, data, horizontalRotation)) return;
+    if (!checkSmoothRotation(config, player, data, verticalRotation)) return;
+    if (!checkSuspiciousRotation(config, player, data, horizontalRotation, verticalRotation)) return;
+}
+
+function initializeRotationData(player: Player, horizontalRotation: number, verticalRotation: number) {
+    lastRotateData.set(player.id, {
+        horizonR: horizontalRotation,
+        verticalR: verticalRotation,
+        lastVel: player.getVelocity(),
+    });
+}
+
+function updateRotationData(player: Player,  any, horizontalRotation: number, verticalRotation: number) {
     const playerVelocity = player.getVelocity();
-    try {
-        const yPitch = Math.abs(data.verticalR - verticalRotation);
-        lastRotateData.set(player.id, { horizonR: horizontalRotation, verticalR: verticalRotation, lastVel: playerVelocity, lastPitch: yPitch });
-    } catch {
-        lastRotateData.set(player.id, { horizonR: horizontalRotation, verticalR: verticalRotation, lastVel: playerVelocity });
-    }
-    if (!raycast) return;
-    const nearestPlayer = raycast?.entity;
-    if (!(raycast.entity instanceof Player) || raycast.distance > 7.5 || player.hasTag(DisableTags.pvp)) return;
-    const pos2 = nearestPlayer.getHeadLocation();
-    if (!data) return;
-    let horizontalAngle = (Math.atan2(pos2.z - pos1.z, pos2.x - pos1.x) * 180) / Math.PI - horizontalRotation - 90;
-    horizontalAngle = Math.abs(horizontalAngle <= -180 ? (horizontalAngle += 360) : horizontalAngle);
-    const { /*x: floatX, */ y: floatY /*, z: floatZ*/ } = playerVelocity;
-    const { x: moveX, y: moveY, z: moveZ } = nearestPlayer.getVelocity();
-    //const float = Math.hypot(floatX, floatZ);
-    const move = Math.hypot(moveX, moveZ);
-    const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
     const yPitch = Math.abs(data.verticalR - verticalRotation);
-    const instantRot = rotatedMove > 60;
-    if (Math.abs(yPitch - data.lastPitch) > 1 && Math.abs(yPitch - data.lastPitch) < 3 && ((verticalRotation < 0 && moveY + floatY > 0) || (verticalRotation > 0 && moveY + floatY < 0)) && move > 0.1) data.invalidPitch++;
-    else data.invalidPitch = 0;
-    if ((rotatedMove > 0 && rotatedMove < 60 && move > 0) || instantRot) {
-        data.kAFlags++;
-        if (instantRot) data.kAFlags = "G";
-    } else if ((rotatedMove == 0 && move > 0) || (rotatedMove > 0 && move == 0) || rotatedMove > 40) data.kAFlags = 0;
-    //   player.onScreenDisplay.setActionBar(`${Math.abs(yPitch - data.lastPitch)}`)
-    let isDetected = false;
-    //killaura/F check for head rotation
-    if (data.kAFlags >= 40) {
-        isDetected = true;
-        flag(player, "Kill Aura", "F", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["Angle" + ":" + toFixed(horizontalAngle, 5, true)]);
-        data.kAFlags = 0;
+
+    data.horizonR = horizontalRotation;
+    data.verticalR = verticalRotation;
+    data.lastVel = playerVelocity;
+    data.lastPitch = yPitch;
+}
+
+function checkInstantRotation(config: configi, player: Player,  any, horizontalRotation: number): boolean {
+    const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
+    const horizontalAngle = calculateHorizontalAngle(player, nearestPlayer, horizontalRotation);
+    const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
+    const move = calculateHorizontalMovement(nearestPlayer);
+
+    if (rotatedMove > 60) {
+        flag(player, "Kill Aura", "G", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["RotatedMove:" + toFixed(rotatedMove, 5, true)]);
+        return false;
     }
-    //killaura/G check for instant rotation to the target
-    if (rotatedMove == 0 && data.kAFlags == "G" && verticalRotation != 0) {
-        isDetected = true;
+
+    if (data.kAFlags === "G" && rotatedMove === 0 && verticalRotation !== 0) {
         flag(player, "Kill Aura", "G", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["RotatedMove:" + toFixed(rotatedMove, 5, true)]);
         data.kAFlags = 0;
+        return false;
     }
-    //killaura/H check for smooth y Pitch movement
-    if (data.invalidPitch >= 20) {
-        isDetected = true;
-        flag(player, "Kill Aura", "H", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["PitchDifferent:" + toFixed(yPitch - data.lastPitch, 5, true)]);
+
+    if ((rotatedMove > 0 && rotatedMove < 60 && move > 0) || rotatedMove > 60) {
+        data.kAFlags++;
+        if (rotatedMove > 60) data.kAFlags = "G";
+    } else if ((rotatedMove === 0 && move > 0) || (rotatedMove > 0 && move === 0) || rotatedMove > 40) {
+        data.kAFlags = 0;
+    }
+
+    if (data.kAFlags >= 40) {
+        flag(player, "Kill Aura", "F", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["Angle" + ":" + toFixed(horizontalAngle, 5, true)]);
+        data.kAFlags = 0;
+        return false;
+    }
+
+    return true;
+}
+
+function checkSmoothRotation(config: configi, player: Player,  any, verticalRotation: number): boolean {
+    const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
+    const move = calculateHorizontalMovement(nearestPlayer);
+    const yPitch = Math.abs(data.verticalR - verticalRotation);
+    const floatY = player.getVelocity().y;
+    const moveY = nearestPlayer.getVelocity().y;
+
+    if (Math.abs(yPitch - data.lastPitch) > 1 && Math.abs(yPitch - data.lastPitch) < 3 && ((verticalRotation < 0 && moveY + floatY > 0) || (verticalRotation > 0 && moveY + floatY < 0)) && move > 0.1) {
+        data.invalidPitch++;
+    } else {
         data.invalidPitch = 0;
     }
-    //killaura/I check for if the player rotation can be divided by 1
+
+    if (data.invalidPitch >= 20) {
+        flag(player, "Kill Aura", "H", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["PitchDifferent:" + toFixed(yPitch - data.lastPitch, 5, true)]);
+        data.invalidPitch = 0;
+        return false;
+    }
+
+    return true;
+}
+
+function checkSuspiciousRotation(config: configi, player: Player,  any, horizontalRotation: number, verticalRotation: number): boolean {
+    const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
+
     if (
         !isSpawning(player) &&
         !isSpikeLagging(player) &&
         Date.now() - player.lastTouchEntity < 300 &&
         (verticalRotation % 1 === 0 || horizontalRotation % 1 === 0) &&
         Math.abs(verticalRotation) !== 90 &&
-        ((rotatedMove > 0 && verticalRotation == 0) || verticalRotation != 0)
+        ((rotatedMove > 0 && verticalRotation === 0) || verticalRotation !== 0)
     ) {
-        isDetected = true;
+        const yPitch = Math.abs(data.verticalR - verticalRotation);
         flag(player, "Kill Aura", "I", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["PitchDifferent:" + toFixed(yPitch - data.lastPitch, 5, true)]);
+        return false;
     }
-    if (isDetected) {
-        player.addTag(DisableTags.pvp);
-        system.runTimeout(() => player.removeTag(DisableTags.pvp), config.antiKillAura.timeout);
-    }
+
+    return true;
+}
+
+function calculateHorizontalAngle(player: Player, target: Player, horizontalRotation: number): number {
+    const pos1 = player.getHeadLocation();
+    const pos2 = target.getHeadLocation();
+
+    let horizontalAngle = (Math.atan2(pos2.z - pos1.z, pos2.x - pos1.x) * 180) / Math.PI - horizontalRotation - 90;
+    return Math.abs(horizontalAngle <= -180 ? (horizontalAngle += 360) : horizontalAngle);
+}
+
+function calculateHorizontalMovement(entity: Player): number {
+    const { x: moveX, z: moveZ } = entity.getVelocity();
+    return Math.hypot(moveX, moveZ);
 }
 
 function calculateVector(l1: Vector3, l2: Vector3) {

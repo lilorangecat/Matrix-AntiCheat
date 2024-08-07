@@ -122,12 +122,15 @@ function doubleEvent(config: configi, player: Player, hitEntity: Entity, onFirst
     }
 }
 
-/*interface LastRotateData {
+interface LastRotateData {
     horizonR: number;
     verticalR: number;
     lastVel: Vector3;
-}*/
-const lastRotateData = new Map();
+    lastPitch: number;
+    kAFlags: number | string;
+    invalidPitch: number;
+}
+const lastRotateData = new Map<string, LastRotateData>();
 function intickEvent(config: configi, player: Player) {
     const data = lastRotateData.get(player.id);
     const PlayerRota = player.getRotation();
@@ -153,10 +156,13 @@ function initializeRotationData(player: Player, horizontalRotation: number, vert
         horizonR: horizontalRotation,
         verticalR: verticalRotation,
         lastVel: player.getVelocity(),
+        lastPitch: 0,
+        kAFlags: 0,
+        invalidPitch: 0,
     });
 }
 
-function updateRotationData(player: Player,  any, horizontalRotation: number, verticalRotation: number) {
+function updateRotationData(player: Player,  LastRotateData, horizontalRotation: number, verticalRotation: number) {
     const playerVelocity = player.getVelocity();
     const yPitch = Math.abs(data.verticalR - verticalRotation);
 
@@ -166,7 +172,7 @@ function updateRotationData(player: Player,  any, horizontalRotation: number, ve
     data.lastPitch = yPitch;
 }
 
-function checkInstantRotation(config: configi, player: Player,  any, horizontalRotation: number): boolean {
+function checkInstantRotation(config: configi, player: Player,  LastRotateData, horizontalRotation: number): boolean {
     const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
     const horizontalAngle = calculateHorizontalAngle(player, nearestPlayer, horizontalRotation);
     const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
@@ -177,7 +183,7 @@ function checkInstantRotation(config: configi, player: Player,  any, horizontalR
         return false;
     }
 
-    if (data.kAFlags === "G" && rotatedMove === 0 && verticalRotation !== 0) {
+    if (data.kAFlags === "G" && rotatedMove === 0 && data.verticalR !== 0) {
         flag(player, "Kill Aura", "G", config.antiKillAura.maxVL, config.antiKillAura.punishment, ["RotatedMove:" + toFixed(rotatedMove, 5, true)]);
         data.kAFlags = 0;
         return false;
@@ -199,7 +205,7 @@ function checkInstantRotation(config: configi, player: Player,  any, horizontalR
     return true;
 }
 
-function checkSmoothRotation(config: configi, player: Player,  any, verticalRotation: number): boolean {
+function checkSmoothRotation(config: configi, player: Player,  LastRotateData, verticalRotation: number): boolean {
     const nearestPlayer = player.getEntitiesFromViewDirection()[0].entity as Player;
     const move = calculateHorizontalMovement(nearestPlayer);
     const yPitch = Math.abs(data.verticalR - verticalRotation);
@@ -221,7 +227,7 @@ function checkSmoothRotation(config: configi, player: Player,  any, verticalRota
     return true;
 }
 
-function checkSuspiciousRotation(config: configi, player: Player,  any, horizontalRotation: number, verticalRotation: number): boolean {
+function checkSuspiciousRotation(config: configi, player: Player,  LastRotateData, horizontalRotation: number, verticalRotation: number): boolean {
     const rotatedMove = Math.abs(data.horizonR - horizontalRotation);
 
     if (
@@ -239,13 +245,13 @@ function checkSuspiciousRotation(config: configi, player: Player,  any, horizont
 
     return true;
 }
-
 function calculateHorizontalAngle(player: Player, target: Player, horizontalRotation: number): number {
     const pos1 = player.getHeadLocation();
     const pos2 = target.getHeadLocation();
 
     let horizontalAngle = (Math.atan2(pos2.z - pos1.z, pos2.x - pos1.x) * 180) / Math.PI - horizontalRotation - 90;
-    return Math.abs(horizontalAngle <= -180 ? (horizontalAngle += 360) : horizontalAngle);
+    horizontalAngle = horizontalAngle <= -180 ? (horizontalAngle += 360) : horizontalAngle;
+    return Math.abs(horizontalAngle);
 }
 
 function calculateHorizontalMovement(entity: Player): number {
@@ -281,7 +287,7 @@ function calculateAngle(attacker: Vector3, target: Vector3, attackerV: Vector3, 
     } as Vector3;
 
     let angle = (Math.atan2(pos2.z - pos1.z, pos2.x - pos1.x) * 180) / Math.PI - rotation - 90;
-    angle = angle <= -180 ? (angle += 360) : angle;
+    angle = angle <= -180 ? angle + 360 : angle;
     return Math.abs(angle);
 }
 

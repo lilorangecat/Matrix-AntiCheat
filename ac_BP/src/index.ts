@@ -19,6 +19,9 @@ class MatrixAnti_MCPE {
         const { world, system } = Minecraft;
         await initialize();
         MatrixAnti_MCPE.init.initialized = true;
+        if (Dynamic.config().configDataBase.enabled) {
+            await dataBaseInitialize();
+        }
         // Launch the anticheat.
         await this.importAll()
             .catch((e) => console.error(e))
@@ -56,6 +59,8 @@ class MatrixAnti_MCPE {
         // Assets
         await import("./Assets/LatinNormalize");
         await import("./Assets/Language");
+        await import("./Functions/Config/dynamic_config")
+        await import("./Assets/Util");
         await import("./Assets/Public");
         // Script unctions
         await import("./Functions/chatModel/ChatHandler");
@@ -178,3 +183,4 @@ import * as Minecraft from "@minecraft/server";
 import { initialize } from "./Functions/Config/dynamic_config";
 import { intilizeModules } from "./Modules/Modules";
 import Dynamic from "./Functions/Config/dynamic_config";
+import { dataBaseInitialize } from "./Functions/Config/config_database";

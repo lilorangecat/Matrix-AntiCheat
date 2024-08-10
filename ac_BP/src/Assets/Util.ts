@@ -104,7 +104,7 @@ function checkBlockAround(location: Vector3, blockType: MinecraftBlockTypes, dim
 
 let Vl: any = {};
 
-type Type = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z";
+export type Type = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z";
 
 function flag(player: Player, modules: string, type: Type, maxVL: number, punishment: string | undefined, infos: string[] | undefined) {
     const config = c();
@@ -284,7 +284,10 @@ function isTimeStr(timeStr: string) {
 }
 
 // Don't delete this, very important
-const c = Dynamic.config;
+function c () {
+    Dynamic;
+    return Dynamic.config();
+}
 
 function inAir(dimension: Dimension, location: Vector3) {
     location = { x: Math.floor(location.x), y: Math.floor(location.y), z: Math.floor(location.z) };

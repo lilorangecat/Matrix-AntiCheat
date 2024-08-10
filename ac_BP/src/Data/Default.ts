@@ -4,6 +4,16 @@
  * @warning NEVER CHANGE THIS FILE IF YOU DON'T KNOW WHAT YOU ARE DOING
  */
 export default {
+    configDataBase: {
+        enabled: true,
+        autorecover: true,
+        confuse: 100,
+        mark: "MATRIX_CONFIG_DATABASE",
+        hashlength: 16,
+        base64Encode: true,
+        sendDataBaseMessage: true,
+        autoCommit: true,
+    },
     sendInitMsg: true,
     sendModuleInitMsg: false,
     createScoreboard: true,
@@ -484,6 +494,12 @@ export default {
         timeout: 60,
         punishment: "ban",
         maxVL: 2,
+    },
+    antiOffhand: {
+        enabled: true,
+        punishment: "ban",
+        maxVL: 0,
+        doUnEquip: true,
     },
     antiBot: {
         enabled: false,

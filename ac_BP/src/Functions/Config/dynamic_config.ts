@@ -3,10 +3,12 @@ import userConfig from "../../Data/Config";
 const config: configi = dy.followUserConfig ? (userConfig as configi) : defaultConfig;
 import { world } from "@minecraft/server";
 import { configi } from "../../Modules/Modules";
+import { commitChanges } from "./config_database";
 
 let common = config;
 
 export async function initialize() {
+    Dynamic;
     const cypher = world.getDynamicProperty("config") as string;
     if (!cypher || !Array.isArray(JSON.parse(cypher))) {
         world.setDynamicProperty("config", "[]");
@@ -22,6 +24,9 @@ export async function initialize() {
     return;
 }
 
+export function getChangers () {
+    return world.getDynamicProperty("config") as string;
+}
 export default class Dynamic {
     static readonly config = (): typeof defaultConfig => common;
     static configAsync = async (): Promise<typeof defaultConfig> => common;
@@ -42,14 +47,18 @@ export default class Dynamic {
         // a
         // world.sendMessage(`${cypher}\n${dynamic.key}`);
         const plaintext = JSON.parse(cypher) as Changer[];
-        plaintext.splice(
-            plaintext.findIndex((changer) => JSON.stringify(changer.target) == JSON.stringify(key)),
-            1
-        );
+        const foundIndex = plaintext.findIndex((changer) => JSON.stringify(changer.target) == JSON.stringify(key));
+        if (foundIndex > -1) {
+            plaintext.splice(
+                plaintext.findIndex((changer) => JSON.stringify(changer.target) == JSON.stringify(key)),
+                1
+            );
+        };
         plaintext.push({ target: key, value: value });
         world.setDynamicProperty("config", JSON.stringify(plaintext));
         // Reload the dynamic config
         initialize();
+        if (config.configDataBase.autoCommit) commitChanges();
     }
 
     static delete(key: string[]) {
@@ -62,6 +71,7 @@ export default class Dynamic {
         world.setDynamicProperty("config", JSON.stringify(plaintext));
         // Reload the dynamic config
         initialize();
+        if (config.configDataBase.autoCommit) commitChanges();
         return true;
     }
 }

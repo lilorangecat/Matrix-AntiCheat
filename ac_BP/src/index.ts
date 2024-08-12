@@ -59,7 +59,7 @@ class MatrixAnti_MCPE {
         // Assets
         await import("./Assets/LatinNormalize");
         await import("./Assets/Language");
-        await import("./Functions/Config/dynamic_config")
+        await import("./Functions/Config/dynamic_config");
         await import("./Assets/Util");
         await import("./Assets/Public");
         // Script unctions
@@ -69,6 +69,7 @@ class MatrixAnti_MCPE {
         await import("./Functions/moderateModel/dimensionLock");
         await import("./Functions/moderateModel/lockDown");
         await import("./Functions/moderateModel/log");
+        await import("./Functions/moderateModel/invPicker");
         // Register commands
         await import("./Functions/chatModel/Commands/helps/about");
         await import("./Functions/chatModel/Commands/helps/help");
@@ -88,6 +89,7 @@ class MatrixAnti_MCPE {
         await import("./Functions/chatModel/Commands/moderations/unfreeze");
         await import("./Functions/chatModel/Commands/moderations/invsee");
         await import("./Functions/chatModel/Commands/moderations/invcopy");
+        await import("./Functions/chatModel/Commands/moderations/invof");
         await import("./Functions/chatModel/Commands/moderations/vanish");
         await import("./Functions/chatModel/Commands/moderations/unvanish");
         await import("./Functions/chatModel/Commands/moderations/warn");

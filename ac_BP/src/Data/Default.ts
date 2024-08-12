@@ -162,6 +162,11 @@ export default {
             adminOnly: true,
             requireTag: [],
         },
+        invof: {
+            enabled: true,
+            adminOnly: true,
+            requireTag: [],
+        },
         echestwipe: {
             enabled: true,
             adminOnly: true,
@@ -318,12 +323,12 @@ export default {
         enabled: true,
         maxReach: 4.21,
         maxYReach: 4.8,
-        punishment: "kick",
+        punishment: "ban",
         maxVL: 3,
     },
     antiFly: {
         enabled: true,
-        punishment: "ban",
+        punishment: "tempkick",
         highVelocity: 0.7,
         maxGroundPrviousVelocity: 0.5,
         maxHighVelocity: 22,
@@ -363,6 +368,8 @@ export default {
         punishment: "tempkick",
         maxVL: 5,
         minTimerLog: 3,
+        maxTickMovment: 64,
+        tickMovementCooldown: 8000,
     },
     antiNuker: {
         enabled: true,
@@ -379,7 +386,7 @@ export default {
         factor: 1,
         minRotation: 20,
         maxBPS: 5,
-        punishment: "kick",
+        punishment: "ban",
         maxVL: 4,
     },
     antiNoSlow: {
